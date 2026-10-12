@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { STATUSES, getLibrary } from "../lib/library";
 import type { LibraryEntry } from "../lib/library";
 import { getCurrentUser, signOut } from "../lib/auth";
+import { fetchAnimeByIds } from "../lib/animeBatch";
 
 const FILTERS = ["All", ...STATUSES];
 
@@ -33,38 +34,25 @@ export default function MyAnimePage() {
 
         const entries = await getLibrary();
 
-        const settled = await Promise.allSettled(
-          entries.map(async (entry): Promise<MyAnime> => {
-            const res = await fetch(`/api/anime/${entry.id}`);
-            const data = await res.json();
-
-            if (!res.ok) {
-              throw new Error(`Anime ${entry.id}: ${data.error ?? res.status}`);
-            }
-
-            return {
-              ...entry,
-              title: data.title,
-              coverImage: data.coverImage ?? null,
-              episodes: data.episodes ?? null,
-            };
-          })
-        );
+        // One batched request for the whole library
+        const details = await fetchAnimeByIds(entries.map((e) => e.id));
 
         if (cancelled) return;
 
         const ok: MyAnime[] = [];
         const failed: string[] = [];
 
-        for (const result of settled) {
-          if (result.status === "fulfilled") {
-            ok.push(result.value);
+        for (const entry of entries) {
+          const data = details.get(entry.id);
+          if (data) {
+            ok.push({
+              ...entry,
+              title: data.title,
+              coverImage: data.coverImage ?? null,
+              episodes: data.episodes ?? null,
+            });
           } else {
-            failed.push(
-              result.reason instanceof Error
-                ? result.reason.message
-                : String(result.reason)
-            );
+            failed.push(`Anime ${entry.id}: could not be loaded`);
           }
         }
 

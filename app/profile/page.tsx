@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { STATUSES, getLibrary } from "../lib/library";
 import type { LibraryEntry, Status } from "../lib/library";
 import { getCurrentUser, signOut } from "../lib/auth";
+import { fetchAnimeByIds } from "../lib/animeBatch";
 
 type Stats = {
   total: number;
@@ -70,17 +71,10 @@ export default function ProfilePage() {
 
         const entries = await getLibrary();
 
-        // Look up genres for each saved anime. Failed lookups are skipped.
+        // One batched request for all genres. Anime that fail to load are skipped.
+        const details = await fetchAnimeByIds(entries.map((e) => e.id));
         const genresById = new Map<number, string[]>();
-
-        await Promise.allSettled(
-          entries.map(async (entry) => {
-            const res = await fetch(`/api/anime/${entry.id}`);
-            if (!res.ok) return;
-            const data = await res.json();
-            genresById.set(entry.id, data.genres ?? []);
-          })
-        );
+        for (const [id, anime] of details) genresById.set(id, anime.genres ?? []);
 
         if (cancelled) return;
         setStats(buildStats(entries, genresById));

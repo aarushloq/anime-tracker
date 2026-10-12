@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getLibrary, setProgress } from "./library";
 import type { LibraryEntry } from "./library";
 import { getCurrentUser } from "./auth";
+import { fetchAnimeByIds } from "./animeBatch";
 
 type Card = LibraryEntry & {
   title: string;
@@ -11,27 +12,24 @@ type Card = LibraryEntry & {
   episodes: number | null;
 };
 
-// Looks up the title and cover for each saved anime. Failed lookups are skipped.
+// Looks up the title and cover for each saved anime in one batched request.
+// Anime that fail to load are skipped.
 async function loadCards(entries: LibraryEntry[]): Promise<Card[]> {
-  const settled = await Promise.allSettled(
-    entries.map(async (entry): Promise<Card> => {
-      const res = await fetch(`/api/anime/${entry.id}`);
-      const data = await res.json();
+  if (entries.length === 0) return [];
+  const details = await fetchAnimeByIds(entries.map((e) => e.id));
 
-      if (!res.ok) {
-        throw new Error(data.error ?? `Request failed: ${res.status}`);
-      }
-
-      return {
+  return entries.flatMap((entry) => {
+    const data = details.get(entry.id);
+    if (!data) return [];
+    return [
+      {
         ...entry,
         title: data.title?.romaji ?? "Unknown title",
         cover: data.coverImage?.large ?? null,
         episodes: data.episodes ?? null,
-      };
-    })
-  );
-
-  return settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+      },
+    ];
+  });
 }
 
 export default function LibraryRows() {
