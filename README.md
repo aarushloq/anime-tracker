@@ -2,7 +2,7 @@
 
 Discover anime, build your own watch list, and track your progress episode by episode.
 
-> **About this project:** This was my first vibe-coded project. I built it to understand how things work, like databases and APIs, just for my own exploration. Expect rough edges.
+> **About this project:** About this project: This was my first vibe-coded project. I didn't build it to ship a product. I built it to understand how real apps work: how a frontend talks to APIs, how data is stored in a database, and how login keeps one user's data separate from another's. It's a learning project, so expect rough edges.
 
 ## Features
 
@@ -52,30 +52,6 @@ flowchart LR
     B -->|"login, library, episode links"| SB
 ```
 
-### User flow
-
-```mermaid
-flowchart LR
-    A["Sign up / Log in"] --> B["Search or Discover"]
-    B --> C["Open anime details"]
-    C --> D["Add to library"]
-    D --> E["Update episodes watched"]
-    E --> F["See it in My Anime and Profile"]
-```
-
-### Library status rules
-
-Updating the episode count also changes the status automatically.
-
-```mermaid
-flowchart TD
-    A["Change episodes watched"] --> B{"Reached the<br/>last episode?"}
-    B -->|Yes| C["Status becomes Completed"]
-    B -->|No| D{"More than 0 watched, and status is<br/>Plan to Watch or Completed?"}
-    D -->|Yes| E["Status becomes Watching"]
-    D -->|No| F["Status stays the same"]
-```
-
 Only anime IDs are stored in my database. Titles and covers are fetched from AniList when needed, so nothing goes stale.
 
 ## Project structure
@@ -88,9 +64,8 @@ app/
 ├── my-anime/             # Your library
 ├── profile/              # Stats
 ├── login/                # Sign up and log in
-├── api/                  # anime, anime/[id], anime/batch, youtube routes
+├── api/                  # anime, anime/[id], youtube routes
 └── lib/                  # Supabase client, auth, library logic, shared components
-supabase/schema.sql       # Database tables and security rules
 ```
 
 ## Run it locally
@@ -102,7 +77,7 @@ supabase/schema.sql       # Database tables and security rules
 2. Copy `.env.example` to `.env.local` and fill in:
    - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from your Supabase project
    - `YOUTUBE_API_KEY` from Google Cloud (optional, only for the YouTube lookup)
-3. Open the Supabase SQL Editor and run [`supabase/schema.sql`](supabase/schema.sql). It creates the `library` and `episode_links` tables and the Row Level Security policies.
+3. Create the `library` and `episode_links` tables in Supabase, turn on Row Level Security, and add policies so users can only access rows where `user_id = auth.uid()`.
 4. Start the app and open [http://localhost:3000](http://localhost:3000):
    ```bash
    npm run dev
